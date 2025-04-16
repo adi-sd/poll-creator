@@ -1,12 +1,10 @@
 package edu.adisd.poll.poll_creator.services;
 
-import edu.adisd.poll.poll_creator.dto.OptionResponse;
-import edu.adisd.poll.poll_creator.dto.PollRequest;
-import edu.adisd.poll.poll_creator.dto.PollResponse;
 import edu.adisd.poll.poll_creator.model.Poll;
-import edu.adisd.poll.poll_creator.model.PollOptions;
+import edu.adisd.poll.poll_creator.model.PollOption;
 import edu.adisd.poll.poll_creator.repositories.PollRepository;
 import java.util.List;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,34 +16,40 @@ public class PollService {
         this.pollRepository = pollRepository;
     }
 
-    public PollResponse createPoll(PollRequest pollRequest) {
-        Poll poll = new Poll();
-        poll.setQuestion(pollRequest.getQuestion());
+    public Poll createPoll(Poll poll) {
+        return pollRepository.save(poll);
+    }
 
-        List<PollOptions> options = pollRequest.getOptions().stream().map(optionRequest -> {
-            PollOptions option = new PollOptions();
-            option.setName(optionRequest.getName());
-            option.setVoteCount(0L);
-            option.setPoll(poll); // ✅ set parent reference
-            return option;
-        }).toList();
+    public List<Poll> getAllPolls() {
+        return pollRepository.findAll();
+    }
 
-        poll.setOptions(options);
+    public ResponseEntity<Poll> getPollById(Long id) {
+        return pollRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
 
-        Poll savedPoll = pollRepository.save(poll);
+    public void vote(Long pollId, int optionIndex) {
+        // Get Poll By ID
+        Poll requiredPoll = pollRepository.findById(pollId)
+                .orElseThrow(() -> new RuntimeException("Poll not found!"));
 
-        // Map entity to response DTO
-        PollResponse response = new PollResponse();
-        response.setId(savedPoll.getId());
-        response.setQuestion(savedPoll.getQuestion());
-        response.setOptions(savedPoll.getOptions().stream().map(option -> {
-            OptionResponse optionResponse = new OptionResponse();
-            optionResponse.setId(option.getId());
-            optionResponse.setName(option.getName());
-            optionResponse.setVoteCount(option.getVoteCount());
-            return optionResponse;
-        }).toList());
+        // Get all its option
+        List<PollOption> options = requiredPoll.getOptions();
 
-        return response;
+        // option index validation for the poll
+        if (optionIndex < 0 || optionIndex >= options.size()) {
+            throw new IllegalArgumentException("Invalid Option Index");
+        }
+
+        // Get Selected Option
+        PollOption selectedOption = options.get(optionIndex);
+
+        // Increment the vote count
+        selectedOption.setVoteCount(selectedOption.getVoteCount() + 1);
+
+        // Save the poll to DB
+        pollRepository.save(requiredPoll);
     }
 }

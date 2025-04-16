@@ -1,9 +1,12 @@
 package edu.adisd.poll.poll_creator.controllers;
 
-import edu.adisd.poll.poll_creator.dto.PollRequest;
-import edu.adisd.poll.poll_creator.dto.PollResponse;
+import edu.adisd.poll.poll_creator.dto.VoteRequest;
+import edu.adisd.poll.poll_creator.model.Poll;
 import edu.adisd.poll.poll_creator.services.PollService;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,10 +22,24 @@ public class PollController {
         this.pollService = pollService;
     }
 
+    @GetMapping
+    public List<Poll> getAllPolls() {
+        return pollService.getAllPolls();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Poll> getPoll(@PathVariable Long id) {
+        return pollService.getPollById(id);
+    }
+
     @PostMapping
-    public ResponseEntity<PollResponse> createPoll(@RequestBody PollRequest pollRequest) {
-        PollResponse pollResponse = pollService.createPoll(pollRequest);
-        return ResponseEntity.ok(pollResponse);
+    public Poll createPoll(@RequestBody Poll poll) {
+        return pollService.createPoll(poll);
+    }
+
+    @PostMapping("/vote")
+    public void vote(@RequestBody VoteRequest vote) {
+        pollService.vote(vote.getPollId(), vote.getOptionIndex());
     }
 
 }
